@@ -56,7 +56,7 @@ func main() {
 	})
 
 	go func() {
-		// At a minimum we'll wait 1s between loops
+		// At a minimum we'll wait 2s between loops
 		//
 		// Note that any of these calls may error out. Most likely these will be timeouts
 		// since the Powerwall drops off wifi (well, mine does) every once in a while.
