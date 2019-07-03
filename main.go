@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
 
 	"github.com/brutella/hc/accessory"
 
@@ -54,26 +53,6 @@ func main() {
 	hc.OnTermination(func() {
 		<-t.Stop()
 	})
-
-	go func() {
-		// At a minimum we'll wait 2s between loops
-		//
-		// Note that any of these calls may error out. Most likely these will be timeouts
-		// since the Powerwall drops off wifi (well, mine does) every once in a while.
-		for {
-			err := pw.Update()
-			if err != nil {
-				fmt.Printf("powerwall update error %+v\n", err)
-			}
-
-			err = sensor.Update()
-			if err != nil {
-				fmt.Printf("grid sensor update error %+v\n", err)
-			}
-
-			time.Sleep(time.Second * 2)
-		}
-	}()
 
 	t.Start()
 }

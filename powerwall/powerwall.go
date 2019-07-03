@@ -50,16 +50,11 @@ func NewPowerwall(ip net.IP) *Powerwall {
 	pw.battery = service.NewBatteryService()
 	pw.AddService(pw.battery.Service)
 
+	pw.battery.BatteryLevel.OnValueRemoteGet(pw.getChargePercentage)
+	pw.battery.ChargingState.OnValueRemoteGet(pw.getChargingState)
+	pw.battery.StatusLowBattery.OnValueRemoteGet(pw.getLowBatteryStatus)
+
 	return pw
-}
-
-func (pw *Powerwall) Update() error {
-	err := pw.updateChargePercentage()
-	if err != nil {
-		return err
-	}
-
-	return pw.updateChargingState()
 }
 
 func (pw *Powerwall) makeRequest(uri string, ret interface{}) error {
@@ -84,27 +79,19 @@ type apiBatteryStatusResponse struct {
 	Percentage float64 `json:"percentage"`
 }
 
-func (pw *Powerwall) updateChargePercentage() error {
+func (pw *Powerwall) getChargePercentage() int {
 	batteryStatus := &apiBatteryStatusResponse{}
 
 	err := pw.makeRequest("/api/system_status/soe", batteryStatus)
 	if err != nil {
-		return err
+		fmt.Printf("updateChargePercentage error: %+v\n", err)
+
+		return -1
 	}
 
 	rounded := math.RoundToEven(batteryStatus.Percentage)
 
-	intRounded := int(rounded)
-
-	pw.battery.BatteryLevel.SetValue(intRounded)
-
-	if intRounded <= 5 {
-		pw.battery.StatusLowBattery.SetValue(characteristic.StatusLowBatteryBatteryLevelLow)
-	} else {
-		pw.battery.StatusLowBattery.SetValue(characteristic.StatusLowBatteryBatteryLevelNormal)
-	}
-
-	return nil
+	return int(rounded)
 }
 
 type apiChargingStatusResponse struct {
@@ -113,27 +100,36 @@ type apiChargingStatusResponse struct {
 	} `json:"battery"`
 }
 
-func (pw *Powerwall) updateChargingState() error {
+func (pw *Powerwall) getChargingState() int {
 	chargingStatus := &apiChargingStatusResponse{}
 
 	err := pw.makeRequest("/api/meters/aggregates", chargingStatus)
 	if err != nil {
-		return err
+		fmt.Printf("updateChargingState error: %+v\n", err)
+
+		return -1
 	}
 
-	// this will just be the most recent value
 	charge := pw.battery.BatteryLevel.GetValue()
 
 	if charge == 100 {
 		// battery is fully charged
-		pw.battery.ChargingState.SetValue(characteristic.ChargingStateNotChargeable)
+		return characteristic.ChargingStateNotChargeable
 	} else if chargingStatus.Battery.InstantPower < 0 {
 		// battery is charging
-		pw.battery.ChargingState.SetValue(characteristic.ChargingStateCharging)
-	} else {
-		// battery is discharging
-		pw.battery.ChargingState.SetValue(characteristic.ChargingStateNotCharging)
+		return characteristic.ChargingStateCharging
 	}
 
-	return nil
+	// battery is discharging
+	return characteristic.ChargingStateNotCharging
+}
+
+func (pw *Powerwall) getLowBatteryStatus() int {
+	charge := pw.battery.BatteryLevel.GetValue()
+
+	if charge <= 5 {
+		return characteristic.StatusLowBatteryBatteryLevelLow
+	}
+
+	return characteristic.StatusLowBatteryBatteryLevelNormal
 }

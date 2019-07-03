@@ -43,11 +43,9 @@ func NewSensor(ip net.IP) *Sensor {
 	s.sensor = service.NewContactSensor()
 	s.AddService(s.sensor.Service)
 
-	return s
-}
+	s.sensor.ContactSensorState.OnValueRemoteGet(s.getSensorState)
 
-func (s *Sensor) Update() error {
-	return s.updateGridConnectionStatus()
+	return s
 }
 
 func (s *Sensor) makeRequest(uri string, ret interface{}) error {
@@ -72,22 +70,24 @@ type apiGridConnectionStatus struct {
 	GridStatus string `json:"grid_status"`
 }
 
-func (s *Sensor) updateGridConnectionStatus() error {
+func (s *Sensor) getSensorState() int {
 	gridConnectionStatus := &apiGridConnectionStatus{}
 
 	err := s.makeRequest("/api/system_status/grid_status", gridConnectionStatus)
 	if err != nil {
-		return err
+		fmt.Printf("getSensorState error: %+v\n", err)
+
+		return -1
 	}
 
 	switch gridConnectionStatus.GridStatus {
-	case "SystemGridConnected": // grid is up
-		s.sensor.ContactSensorState.SetValue(characteristic.ContactSensorStateContactDetected)
 	case "SystemIslandedActive": // grid is down
-		s.sensor.ContactSensorState.SetValue(characteristic.ContactSensorStateContactNotDetected)
+		return characteristic.ContactSensorStateContactNotDetected
+	case "SystemGridConnected": // grid is up
+		fallthrough
 	case "SystemTransitionToGrid": // grid is restored but not yet in sync
-		s.sensor.ContactSensorState.SetValue(characteristic.ContactSensorStateContactDetected)
+		fallthrough
+	default:
+		return characteristic.ContactSensorStateContactDetected
 	}
-
-	return nil
 }
