@@ -14,12 +14,14 @@ import (
 	"github.com/brutella/hc"
 )
 
-var powerwallIP string
+var powerwallIP, pinCode string
 
 const ipDefault = ""
+const pinCodeDefault = "00102003"
 
 func main() {
 	flag.StringVar(&powerwallIP, "ip", ipDefault, "ip address of powerwall")
+	flag.StringVar(&pinCode, "pin", pinCodeDefault, "homekit pin code to use for this accessory")
 
 	flag.Parse()
 
@@ -41,8 +43,7 @@ func main() {
 
 	sensor := grid.NewSensor(ip)
 
-	// TODO: pass this from the cmdline?
-	pwConfig := hc.Config{Pin: "00102003"}
+	pwConfig := hc.Config{Pin: pinCode}
 
 	// NOTE: the first accessory in the list acts as the bridge, while the rest will be linked to it
 	t, err := hc.NewIPTransport(pwConfig, bridge.Accessory, pw.Accessory, sensor.Accessory)
