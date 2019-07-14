@@ -50,8 +50,13 @@ func NewPowerwall(ip net.IP) *Powerwall {
 	pw.battery = service.NewBatteryService()
 	pw.AddService(pw.battery.Service)
 
+	pw.battery.BatteryLevel.SetValue(pw.getChargePercentage())
 	pw.battery.BatteryLevel.OnValueRemoteGet(pw.getChargePercentage)
+
+	pw.battery.ChargingState.SetValue(pw.getChargingState())
 	pw.battery.ChargingState.OnValueRemoteGet(pw.getChargingState)
+
+	pw.battery.StatusLowBattery.SetValue(pw.getLowBatteryStatus())
 	pw.battery.StatusLowBattery.OnValueRemoteGet(pw.getLowBatteryStatus)
 
 	return pw

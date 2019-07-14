@@ -43,6 +43,7 @@ func NewSensor(ip net.IP) *Sensor {
 	s.sensor = service.NewContactSensor()
 	s.AddService(s.sensor.Service)
 
+	s.sensor.ContactSensorState.SetValue(s.getSensorState())
 	s.sensor.ContactSensorState.OnValueRemoteGet(s.getSensorState)
 
 	return s
